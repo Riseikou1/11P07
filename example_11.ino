@@ -73,10 +73,9 @@ void loop() {
     digitalWrite(PIN_LED, 0);       // LED ON      
   }
 
-  // Apply EMA filter here  
+  
   dist_ema = _EMA_ALPHA * dist_raw + (1 - _EMA_ALPHA) * dist_prev;
 
-  // adjust servo position according to the USS read value
   int angle;
   if (dist_ema <= _TARGET_LOW) {
     angle = 0;
@@ -111,4 +110,3 @@ float USS_measure(int TRIG, int ECHO)
   
   return pulseIn(ECHO, HIGH, TIMEOUT) * SCALE; // unit: mm
 }
-
