@@ -20,11 +20,12 @@
                           // Setting EMA to 1 effectively disables EMA filter.
 
 // Target Distance
-#define _TARGET_LOW  250.0  // 18 cm
-#define _TARGET_HIGH 290.0  // 22 cm
+#define _TARGET_LOW  180.0  // 18 cm
+#define _TARGET_HIGH 360.0  // 36 cm
 
 // duty duration for myservo.writeMicroseconds()
 // NEEDS TUNING (servo by servo)
+
 #define _DUTY_MIN 1000 // servo full clockwise position (0 degree)
 #define _DUTY_NEU 1500 // servo neutral position (90 degree)
 #define _DUTY_MAX 2000 // servo full counterclockwise position (180 degree)
@@ -53,8 +54,8 @@ void setup() {
 }
 
 void loop() {
-  float dist_raw;
-
+  float  dist_raw;
+  
   // wait until next sampling time. 
   if (millis() < (last_sampling_time + INTERVAL))
     return;
@@ -72,17 +73,21 @@ void loop() {
     digitalWrite(PIN_LED, 0);       // LED ON      
   }
 
-  // Apply ema filter here  
-  dist_ema = dist_raw;
+  // Apply EMA filter here  
+  dist_ema = _EMA_ALPHA * dist_raw + (1 - _EMA_ALPHA) * dist_prev;
 
   // adjust servo position according to the USS read value
-  if (dist_raw <= _TARGET_LOW) {
-    myservo.writeMicroseconds(_DUTY_MIN); // Set servo to 0°
-  } else if (dist_raw > _TARGET_LOW && dist_raw < _TARGET_HIGH) {
-    myservo.writeMicroseconds(_DUTY_NEU); // Set servo to 90°
-  } else if (dist_raw >= _TARGET_HIGH) {
-    myservo.writeMicroseconds(_DUTY_MAX); // Set servo to 180°
+  int angle;
+  if (dist_ema <= _TARGET_LOW) {
+    angle = 0;
+  } else if (dist_ema >= _TARGET_HIGH) {
+    angle = 180;
+  } else {
+    angle = map(dist_ema, _TARGET_LOW, _TARGET_HIGH, 0, 180);
   }
+
+  int duty_cycle = map(angle, 0, 180, _DUTY_MIN, _DUTY_MAX);
+  myservo.writeMicroseconds(duty_cycle);
 
   // output the distance to the serial port
   Serial.print("Min:");    Serial.print(_DIST_MIN);
@@ -92,7 +97,7 @@ void loop() {
   Serial.print(",High:");  Serial.print(_TARGET_HIGH);
   Serial.print(",Max:");   Serial.print(_DIST_MAX);
   Serial.println("");
-
+ 
   // update last sampling time
   last_sampling_time += INTERVAL;
 }
@@ -106,3 +111,4 @@ float USS_measure(int TRIG, int ECHO)
   
   return pulseIn(ECHO, HIGH, TIMEOUT) * SCALE; // unit: mm
 }
+
